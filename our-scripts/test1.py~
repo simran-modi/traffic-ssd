@@ -1,0 +1,15 @@
+import caffe
+import cv2
+
+model = '/home/simran/Desktop/project/code/model/model.prototxt'
+model_weights = '/home/simran/Desktop/project/code/model/model.caffemodel'
+image_path =''
+
+net = caffe.Net(model,model_weights, 'test')
+
+image = cv2.imread(image_path)
+transformer = caffe.io.Transformer({'data': (1, image.shape[2], image.shape[0], image.shape[1])})
+net.blobs['data'].data[...] = transformer.preprocess('data', image)  
+res = net.forward({image});
+cls_scores = net.blobs['cls_score'].data
+print(cls_scores)
