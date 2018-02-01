@@ -36,23 +36,21 @@ with open('signnames.csv', 'r') as f:
 # Create raw data pickle file
 data_raw = {}
 
-"""
-folder_list = list of folders in dataset
+folder_list = ["belgium","german","italian_day","italian_night","italian_fog"]
 for folder in folder_list:
 	do this
-
+'''
 data_raw{
  source1: {image_filename : [{'class': class_int, 'box_coords': (x1, y1, x2, y2)}, {...}, ...],image_filename2...}
  source2: {image_filename : [{'class': class_int, 'box_coords': (x1, y1, x2, y2)}, {...}, ...]}
  source3: {image_filename : [{'class': class_int, 'box_coords': (x1, y1, x2, y2)}, {...}, ...]}
  source4: {image_filename : [{'class': class_int, 'box_coords': (x1, y1, x2, y2)}, {...}, ...]}
 }
-
-"""
+'''
 
 # For speed, put entire contents of mergedAnnotations.csv in memory
 merged_annotations = []
-with open('mergedAnnotations.csv', 'r') as f: #open folder_name.csv
+with open('Annotations.csv', 'r') as f: #open folder_name.csv
 	for line in f:
 		line = line[:-1]  # strip trailing newline
 		merged_annotations.append(line)
