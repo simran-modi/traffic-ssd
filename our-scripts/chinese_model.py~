@@ -48,12 +48,12 @@ convolution_2 = tf.nn.conv2d(pooled_layer_1, conv2_weights, strides=[1,1,1,1], p
 bias_layer_2 = tf.nn.relu(tf.nn.bias_add(convolution_2, conv2_biases))
 normalized_layer_2 = tf.nn.local_response_normalization(bias_layer_2, depth_radius=5,bias=8,alpha=0.0005,beta=0.75,name ='norm2')
 pooled_layer_2 = tf.nn.max_pool(normalized_layer_2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID', name='pool2')
-print("Conv2: ")
-print(convolution_2.get_shape())
+
 #layer 3
 convolution_3 = tf.nn.conv2d(pooled_layer_2, conv3_weights, strides=[1,1,1,1], padding='SAME', name='conv3')
 bias_layer_3 = tf.nn.relu(tf.nn.bias_add(convolution_3, conv3_biases))
-
+print("Conv3: ")
+print(convolution_3.get_shape())
 #layer 4
 convolution_4 = tf.nn.conv2d(bias_layer_3, conv4_weights, strides=[1,1,1,1], padding='SAME', name='conv4') 
 bias_layer_4 = tf.nn.relu(tf.nn.bias_add(convolution_4, conv4_biases))

@@ -83,7 +83,6 @@ for image_file in image_files:
 				image = Image.open('annotations/' + image_file)
 				orig_w, orig_h = image.size
 
-
 				if GRAYSCALE:
 					image = image.convert('L')  # 8-bit grayscale
 				image = image.resize((TARGET_W, TARGET_H), Image.LANCZOS)  # high-quality downsampling filter

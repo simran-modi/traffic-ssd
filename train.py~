@@ -53,7 +53,7 @@ def next_batch(X, y_conf, y_loc, batch_size):
 		images = images/127.5 - 1.
 
 		# For y_true_conf, calculate how many negative examples we need to satisfy NEG_POS_RATIO
-		num_pos = np.where(y_true_conf > 0)[0].shape[0] # have a sign
+		num_pos = np.where(y_true_conf > 0)[0].shape[0]
 		num_neg = NEG_POS_RATIO * num_pos
 		y_true_conf_size = np.sum(y_true_conf.shape) #??? 1-dimensional only no
 
