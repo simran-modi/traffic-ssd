@@ -32,7 +32,7 @@ if MODEL == 'AlexNet':
 	#IMG_H, IMG_W = 300, 300
 	#FM_SIZES = [[36, 36], [17, 17], [9, 9], [5, 5]]  # feature map sizes for SSD hooks via TensorBoard visualization (HxW)
 
-	IMG_H, IMG_W = 260, 400
+	IMG_H, IMG_W = 480, 640
 	FM_SIZES = [[31, 48], [15, 23], [8, 12], [4, 6]]
 	#FM_SIZES = [[58, 78], [28, 38], [13, 18]]
 else:

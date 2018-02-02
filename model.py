@@ -299,7 +299,8 @@ def nms(y_pred_conf, y_pred_loc, prob):
 						# Compare this box to all previous boxes of this class
 						cls = y_pred_conf[y_idx]
 						cls_prob = prob[y_idx]
-						box = (*box_coords, cls, cls_prob)
+						#box = (*box_coords, cls, cls_prob) #python3.5 + FIXME
+						box = (box_coords, cls, cls_prob)
 						if len(class_boxes[cls]) == 0:
 							class_boxes[cls].append(box)
 						else:

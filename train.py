@@ -1,13 +1,13 @@
 '''
 Train the model on dataset
 '''
+import cv2
 import tensorflow as tf
 from settings import *
 from model import SSDModel
 from model import ModelHelper
 import numpy as np
 from sklearn.model_selection import train_test_split
-import cv2
 import math
 import os
 import time
@@ -96,7 +96,7 @@ def run_training():
 	Save model
 	"""
 	# Load training and test data
-	with open('data_prep_%sx%s.p' % (IMG_W, IMG_H), mode='rb') as f:
+	with open('/home/simran/Desktop/data_prep_%sx%s.p' % (IMG_W, IMG_H), mode='rb') as f:
 		train = pickle.load(f)
 	#with open('test.p', mode='rb') as f:
 	#	test = pickle.load(f)
@@ -105,12 +105,12 @@ def run_training():
 	X_train = []
 	y_train_conf = []
 	y_train_loc = []
-	
-for source in train.keys():
-	for image_file in train[source].keys():
-		Xs_train.append(image_file)
-		ys_train_conf.append(train[image_file]['y_true_conf'])
-		ys_train_loc.append(train[image_file]['y_true_loc'])
+
+	for source in train.keys():
+		for image_file in train[source].keys():
+			Xs_train.append(image_file)
+			ys_train_conf.append(train[image_file]['y_true_conf'])
+			ys_train_loc.append(train[image_file]['y_true_loc'])
 	Xs_train = np.array(Xs_train)
 	ys_train_conf = np.array(ys_train_conf)
 	ys_train_loc = np.array(ys_train_loc)
@@ -119,7 +119,7 @@ for source in train.keys():
 	Xs_train, Xs_valid, ys_train_conf, ys_valid_conf, ys_train_loc, ys_valid_loc = train_test_split(\
 		Xs_train, ys_train_conf, ys_train_loc, test_size=VALIDATION_SIZE, random_state=1)
 
-	X_train is a numpy array
+	#X_train is a numpy array
 	X_train.append(Xs_train.items()) #DO: append a items in Xs_train numpy array to a global numpy array
 	...
 	...
