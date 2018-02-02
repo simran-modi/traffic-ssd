@@ -53,9 +53,9 @@ def next_batch(X, y_conf, y_loc, batch_size):
 		images = images/127.5 - 1.
 
 		# For y_true_conf, calculate how many negative examples we need to satisfy NEG_POS_RATIO
-		num_pos = np.where(y_true_conf > 0)[0].shape[0] # have a sign
+		num_pos = np.where(y_true_conf > 0)[0].shape[0]
 		num_neg = NEG_POS_RATIO * num_pos
-		y_true_conf_size = np.sum(y_true_conf.shape) #??? 1-dimensional only no
+		y_true_conf_size = np.sum(y_true_conf.shape)
 
 		# Create confidence loss mask to satisfy NEG_POS_RATIO
 		if num_pos + num_neg < y_true_conf_size:
@@ -105,9 +105,9 @@ def run_training():
 	X_train = []
 	y_train_conf = []
 	y_train_loc = []
-"""
+	
 for source in train.keys():
-	forimage_file in train[source]:
+	for image_file in train[source].keys():
 		Xs_train.append(image_file)
 		ys_train_conf.append(train[image_file]['y_true_conf'])
 		ys_train_loc.append(train[image_file]['y_true_loc'])
@@ -123,8 +123,8 @@ for source in train.keys():
 	X_train.append(Xs_train.items()) #DO: append a items in Xs_train numpy array to a global numpy array
 	...
 	...
-"""
-	for image_file in train.keys():
+	
+	for image_file in train[source].keys():
 		X_train.append(image_file)
 		y_train_conf.append(train[image_file]['y_true_conf'])
 		y_train_loc.append(train[image_file]['y_true_loc'])

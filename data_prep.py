@@ -39,7 +39,7 @@ def find_gt_boxes(data_raw, image_file):
 	# Pre-process ground-truth data
 	# Convert absolute coordinates to relative coordinates ranging from 0 to 1
 	# Read the sign class label (note background class label is 0, sign labels are ints >=1)
-	signs_data = data_raw[image_file]
+	signs_data = data_raw[sources][image_file]
 
 	signs_class = []
 	signs_box_coords = []  # relative coordinates
@@ -117,16 +117,18 @@ def do_data_prep(data_raw):
 	"""
 	# Prepare the data by populating y_true appropriately
 	data_prep = {}
-	# for source in data_raw.keys():
-	for image_file in data_raw.keys(): #for image_file in data_raw[source]
+	for source in data_raw.keys():
+                do this
+	#for image_file in data_raw.keys():
+                for image_file in data_raw[source].keys():
 		# Find groud-truth boxes based on Jaccard overlap,
 		# populate y_true_conf (class labels) and y_true_loc (normalized box coordinates)
 		y_true_conf, y_true_loc, match_counter = find_gt_boxes(data_raw, image_file)
 
 		# Only want data points where we have matching default boxes
 		if match_counter > 0:
-			#data_prep[source][image_file] = {'y_true_conf': y_true_conf, 'y_true_loc': y_true_loc}
-			data_prep[image_file] = {'y_true_conf': y_true_conf, 'y_true_loc': y_true_loc}
+			data_prep[source][image_file] = {'y_true_conf': y_true_conf, 'y_true_loc': y_true_loc}
+			#data_prep[image_file] = {'y_true_conf': y_true_conf, 'y_true_loc': y_true_loc}
 
 	return data_prep
 

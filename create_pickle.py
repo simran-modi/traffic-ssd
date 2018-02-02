@@ -35,8 +35,9 @@ with open('signnames.csv', 'r') as f:
 
 # Create raw data pickle file
 data_raw = {}
-
-folder_list = ["belgium","german","italian_day","italian_night","italian_fog"]
+path='/some/path'
+os.chdir(path)
+folder_list = os.listdir(path)
 for folder in folder_list:
 	do this
 '''
@@ -50,14 +51,14 @@ data_raw{
 
 # For speed, put entire contents of mergedAnnotations.csv in memory
 merged_annotations = []
-with open('Annotations.csv', 'r') as f: #open folder_name.csv
+with open(folder +'/Annotations.csv', 'r') as f: #open folder_name.csv
 	for line in f:
 		line = line[:-1]  # strip trailing newline
 		merged_annotations.append(line)
 
 # Create pickle file to represent dataset
 
-image_files = os.listdir('annotations') 
+image_files = os.listdir(folder+'/images') 
 for image_file in image_files:
 	# Find box coordinates for all signs in this image
 	class_list = []
@@ -80,7 +81,6 @@ for image_file in image_files:
 				# Resize the images and write to 'resized_images/'
 				image = Image.open('annotations/' + image_file)
 				orig_w, orig_h = image.size
-
 
 				if GRAYSCALE:
 					image = image.convert('L')  # 8-bit grayscale
@@ -118,3 +118,4 @@ for image_file in image_files:
 
 with open('data_raw_%dx%d.p' % (TARGET_W, TARGET_H), 'wb') as f:
 	pickle.dump(data_raw, f)
+                    
