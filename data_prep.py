@@ -4,6 +4,7 @@ Data preparation
 from settings import *
 import numpy as np
 import pickle
+from collections import defaultdict
 
 
 def calc_iou(box_a, box_b):
@@ -24,7 +25,7 @@ def calc_iou(box_a, box_b):
 	area_box_a = (box_a[2] - box_a[0]) * (box_a[3] - box_a[1])
 	area_box_b = (box_b[2] - box_b[0]) * (box_b[3] - box_b[1])
 	union = area_box_a + area_box_b - intersection
-
+	
 	iou = intersection / union
 	return iou
 
@@ -54,14 +55,12 @@ def find_gt_boxes(data_raw,source,image_file):
 		scale = np.array([IMG_W, IMG_H, IMG_W, IMG_H])
 		box_coords = np.array(abs_box_coords) / scale
 		signs_box_coords.append(box_coords)
-
 	# Initialize y_true to all 0s (0 -> background)
 	y_true_len = 0
 	for fm_size in FM_SIZES:
 		y_true_len += fm_size[0] * fm_size[1] * NUM_DEFAULT_BOXES
 	y_true_conf = np.zeros(y_true_len)
 	y_true_loc = np.zeros(y_true_len * 4)
-
 	# For each GT box, for each feature map, for each feature map cell, for each default box:
 	# 1) Calculate the Jaccard overlap (IOU) and annotate the class label
 	# 2) Count how many box matches we got
@@ -86,7 +85,6 @@ def find_gt_boxes(data_raw,source,image_file):
 						scale = np.array([fm_w, fm_h, fm_w, fm_h])
 						db_box_coords = abs_db_box_coords / scale
 						# Calculate Jaccard overlap (i.e. Intersection Over Union, IOU) of GT box and default box
-						#ALL IOU ARE ZERO - FIXME
 						iou = calc_iou(gt_box_coords, db_box_coords)
 
 						# If box matches, i.e. IOU threshold met
@@ -100,9 +98,10 @@ def find_gt_boxes(data_raw,source,image_file):
 							abs_gt_box_coords = gt_box_coords * scale  # absolute ground truth box coordinates (in feature map grid)
 							norm_box_coords = abs_gt_box_coords - np.concatenate((abs_box_center, abs_box_center))
 							y_true_loc[y_true_idx*4 : y_true_idx*4 + 4] = norm_box_coords
+							
 
 						y_true_idx += 1
-
+	#print(np.unique(y_true_conf), np.unique(y_true_loc), match_counter)
 	return y_true_conf, y_true_loc, match_counter
 
 
@@ -112,27 +111,29 @@ def do_data_prep(data_raw):
 	new data_prep dict {source1: {image_file1: {'y_true_conf': y_true_conf, 'y_true_loc': y_true_loc}, image_file2: ...}, source2: ...}
 	"""
 	# Prepare the data by populating y_true appropriately
-	data_prep = {}
+	data_prep = defaultdict(dict)
 	for source in data_raw.keys():
 		for image_file in data_raw[source].keys():
 			# Find groud-truth boxes based on Jaccard overlap,
 			# populate y_true_conf (class labels) and y_true_loc (normalized box coordinates)
 			y_true_conf, y_true_loc, match_counter = find_gt_boxes(data_raw, source, image_file)
+			#print(np.unique(y_true_conf), np.unique(y_true_loc))
 			# Only want data points where we have matching default boxes
 			if match_counter > 0:
 				data_prep[source][image_file] = {'y_true_conf': y_true_conf, 'y_true_loc': y_true_loc}
-				#data_prep[image_file] = {'y_true_conf': y_true_conf, 'y_true_loc': y_true_loc}
+				
 	return data_prep
 
 
 if __name__ == '__main__':
-	with open('/home/simran/Desktop/data_raw_%sx%s.p' % (IMG_W, IMG_H), 'rb') as f:
+	with open('/home/rhea/Desktop/project/data_raw_%sx%s.p' % (IMG_W, IMG_H), 'rb') as f:
 		data_raw = pickle.load(f)
 
 	print('Preparing data (i.e. matching boxes)')
 	data_prep = do_data_prep(data_raw)
+	print(data_prep)
 
-	with open('/home/simran/Desktop/data_prep_%sx%s.p' % (IMG_W, IMG_H), 'wb') as f:
+	with open('/home/rhea/Desktop/project/data_prep_%sx%s.p' % (IMG_W, IMG_H), 'wb') as f:
 		pickle.dump(data_prep, f)
 
 	print('Done. Saved prepared data to data_prep_%sx%s.p' % (IMG_W, IMG_H))

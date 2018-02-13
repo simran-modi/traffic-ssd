@@ -17,10 +17,8 @@ def SSDHook(feature_map, hook_id):
 		# Note we have linear activation (i.e. no activation function)
 		net_conf = slim.conv2d(inputs=feature_map, num_outputs=NUM_PRED_CONF, kernel_size=[3, 3], activation_fn=None, scope='conv_conf')
 		net_conf = tf.contrib.layers.flatten(net_conf)
-
 		net_loc = slim.conv2d(feature_map, NUM_PRED_LOC, [3, 3], activation_fn=None, scope='conv_loc')
 		net_loc = tf.contrib.layers.flatten(net_loc)
-
 	return net_conf, net_loc
 
 
@@ -53,21 +51,22 @@ def ModelHelper(y_pred_conf, y_pred_loc):
 	y_true_loc  = tf.placeholder(tf.float32, [None, num_total_preds_loc], name='y_true_loc')  # localization ground-truth labels
 	conf_loss_mask = tf.placeholder(tf.float32, [None, num_total_preds], name='conf_loss_mask')  # 1 mask "bit" per def. box
 
+	num_pos = tf.placeholder(tf.float32, name='num_pos')	#Number of matching default boxes
 	# Confidence loss
 	logits = tf.reshape(y_pred_conf, [-1, num_total_preds, NUM_CLASSES])
-	conf_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits, y_true_conf)
+	conf_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y_true_conf, logits=logits)
 	conf_loss = conf_loss_mask * conf_loss  # "zero-out" the loss for don't-care negatives
 	conf_loss = tf.reduce_sum(conf_loss)
 
 	# Localization loss (smooth L1 loss)
 	# loc_loss_mask is analagous to conf_loss_mask, except 4 times the size
-	diff = y_true_loc - y_pred_loc
+	diff = y_true_loc - y_pred_loc 
 	
 	loc_loss_l2 = 0.5 * (diff**2.0)
 	loc_loss_l1 = tf.abs(diff) - 0.5
 	smooth_l1_condition = tf.less(tf.abs(diff), 1.0)
-	loc_loss = tf.select(smooth_l1_condition, loc_loss_l2, loc_loss_l1)
-	
+	loc_loss = tf.where(smooth_l1_condition, loc_loss_l2, loc_loss_l1)
+	#tf.Print(loc_loss,[loc_loss],"Localization loss: ")
 	loc_loss_mask = tf.minimum(y_true_conf, 1)  # have non-zero localization loss only where we have matching ground-truth box
 	loc_loss_mask = tf.to_float(loc_loss_mask)
 	loc_loss_mask = tf.stack([loc_loss_mask] * 4, axis=2)  # [0, 1, 1] -> [[[0, 0, 0, 0], [1, 1, 1, 1], [1, 1, 1, 1]], ...]
@@ -77,7 +76,7 @@ def ModelHelper(y_pred_conf, y_pred_loc):
 
 	# Weighted average of confidence loss and localization loss-zero localization loss only where we ha
 	# Also add regularization loss
-	loss = conf_loss + LOC_LOSS_WEIGHT * loc_loss + tf.reduce_sum(slim.losses.get_regularization_losses())
+	loss = ((conf_loss + LOC_LOSS_WEIGHT * loc_loss)/num_pos) + tf.reduce_sum(slim.losses.get_regularization_losses())
 	optimizer = OPT.minimize(loss)
 
 	#reported_loss = loss #tf.reduce_sum(loss, 1)  # DEBUG
@@ -100,6 +99,7 @@ def ModelHelper(y_pred_conf, y_pred_loc):
 		'probs': probs,
 		'preds_conf': preds_conf,
 		'preds_loc': y_pred_loc,
+		'num_pos' : num_pos,
 	}
 	return ret_dict
 
@@ -117,19 +117,21 @@ def AlexNet():
 	preds_loc = []
 
 	# Create the variables and copy the weights
-	wt_dict = np.load("weights.npy", encoding = 'latin1')
-	conv1_weights = tf.get_variable('conv1_weights', initializer=wt_dict['Convolution1']['weights'], trainable=False)
-	conv1_biases = tf.get_variable('conv1_biases', initializer=wt_dict['Convolution1']['biases'], trainable=False)
-	conv2_weights = tf.get_variable('conv2_weights', initializer=wt_dict['Convolution2']['weights'], trainable=False)
-	conv2_biases = tf.get_variable('conv2_biases', initializer=wt_dict['Convolution2']['biases'], trainable=False)
-	conv3_weights = tf.get_variable('conv3_weights', initializer=wt_dict['Convolution3']['weights'], trainable=False)
-	conv3_biases = tf.get_variable('conv3_biases', initializer=wt_dict['Convolution3']['biases'], trainable=False)
-	conv4_weights = tf.get_variable('conv4_weights', initializer=wt_dict['Convolution4']['weights'], trainable=False)
-	conv4_biases = tf.get_variable('conv4_biases', initializer=wt_dict['Convolution4']['biases'], trainable=False)
-	conv5_weights = tf.get_variable('conv5_weights', initializer=wt_dict['Convolution5']['weights'], trainable=False)
-	conv5_biases = tf.get_variable('conv5_biases', initializer=wt_dict['Convolution5']['biases'], trainable=False)
-	conv6_weights = tf.get_variable('conv6_weights', initializer=wt_dict['Convolution6']['weights'], trainable=False)
-	conv6_biases = tf.get_variable('conv6_biases', initializer=wt_dict['Convolution6']['biases'], trainable=False)
+	wt = np.load("/home/simran/Desktop/project/weights.npy", encoding = 'latin1')
+	wt_dict = wt.item()
+	#print(wt_dict['Convolution1']['weights'])
+	conv1_weights = tf.get_variable('conv1_weights', initializer=wt_dict['Convolution1']['weights'], trainable=True)
+	conv1_biases = tf.get_variable('conv1_biases', initializer=wt_dict['Convolution1']['biases'], trainable=True)
+	conv2_weights = tf.get_variable('conv2_weights', initializer=wt_dict['Convolution2']['weights'], trainable=True)
+	conv2_biases = tf.get_variable('conv2_biases', initializer=wt_dict['Convolution2']['biases'], trainable=True)
+	conv3_weights = tf.get_variable('conv3_weights', initializer=wt_dict['Convolution3']['weights'], trainable=True)
+	conv3_biases = tf.get_variable('conv3_biases', initializer=wt_dict['Convolution3']['biases'], trainable=True)
+	conv4_weights = tf.get_variable('conv4_weights', initializer=wt_dict['Convolution4']['weights'], trainable=True)
+	conv4_biases = tf.get_variable('conv4_biases', initializer=wt_dict['Convolution4']['biases'], trainable=True)
+	conv5_weights = tf.get_variable('conv5_weights', initializer=wt_dict['Convolution5']['weights'], trainable=True)
+	conv5_biases = tf.get_variable('conv5_biases', initializer=wt_dict['Convolution5']['biases'], trainable=True)
+	conv6_weights = tf.get_variable('conv6_weights', initializer=wt_dict['Convolution6']['weights'], trainable=True)
+	conv6_biases = tf.get_variable('conv6_biases', initializer=wt_dict['Convolution6']['biases'], trainable=True)
 
 	#Build the network
 	#layer 1
@@ -144,7 +146,7 @@ def AlexNet():
 	normalized_layer_2 = tf.nn.local_response_normalization(bias_layer_2, depth_radius=5,bias=8,alpha=0.0005,beta=0.75,name ='norm2')
 	pooled_layer_2 = tf.nn.max_pool(normalized_layer_2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID', name='pool2')
 
-	net_conf, net_loc = SSDHook(pooled_layer_2, 'conv2')
+	net_conf, net_loc = SSDHook(convolution_2, 'conv2')
 	preds_conf.append(net_conf)
 	preds_loc.append(net_loc)
 
@@ -161,7 +163,7 @@ def AlexNet():
 	bias_layer_5 = tf.nn.relu(tf.nn.bias_add(convolution_5, conv5_biases))
 	pooled_layer_5 = tf.nn.max_pool(bias_layer_5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID', name='pool5')
 
-	net_conf, net_loc = SSDHook(pooled_layer_5, 'conv5')
+	net_conf, net_loc = SSDHook(convolution_5, 'conv5')
 	preds_conf.append(net_conf)
 	preds_loc.append(net_loc)
 
@@ -170,55 +172,13 @@ def AlexNet():
 	bias_layer_6 = tf.nn.relu(tf.nn.bias_add(convolution_6, conv6_biases))
 	dropout_layer_6 = tf.nn.dropout(bias_layer_6, keep_prob = 0.5, name='drop6')
 
-	net_conf, net_loc = SSDHook(dropout_layer_6, 'conv6')
+	net_conf, net_loc = SSDHook(convolution_6, 'conv6')
 	preds_conf.append(net_conf)
 	preds_loc.append(net_loc)
 
-	"""
-	# Use batch normalization for all convolution layers
-	# FIXME: Not sure why setting is_training is not working well
-	#with slim.arg_scope([slim.conv2d], normalizer_fn=slim.batch_norm, normalizer_params={'is_training': is_training}):
-	with slim.arg_scope([slim.conv2d], normalizer_fn=slim.batch_norm, normalizer_params={'is_training': True},\
-			weights_regularizer=slim.l2_regularizer(scale=REG_SCALE)):
-		net = slim.conv2d(x, 64, [11, 11], 4, padding='VALID', scope='conv1')
-		net = slim.max_pool2d(net, [3, 3], 2, scope='pool1')
-		net = slim.conv2d(net, 192, [5, 5], scope='conv2')
-
-		net_conf, net_loc = SSDHook(net, 'conv2')
-		preds_conf.append(net_conf)
-		preds_loc.append(net_loc)
-
-		net = slim.max_pool2d(net, [3, 3], 2, scope='pool2')
-		net = slim.conv2d(net, 384, [3, 3], scope='conv3')
-		net = slim.conv2d(net, 384, [3, 3], scope='conv4')
-		net = slim.conv2d(net, 256, [3, 3], scope='conv5')
-
-		# The following layers added for SSD
-		net = slim.conv2d(net, 1024, [3, 3], scope='conv6')
-		net = slim.conv2d(net, 1024, [1, 1], scope='conv7')
-
-		net_conf, net_loc = SSDHook(net, 'conv7')
-		preds_conf.append(net_conf)
-		preds_loc.append(net_loc)
-
-		net = slim.conv2d(net, 256, [1, 1], scope='conv8')
-		net = slim.conv2d(net, 512, [3, 3], 2, scope='conv8_2')
-
-		net_conf, net_loc = SSDHook(net, 'conv8_2')
-		preds_conf.append(net_conf)
-		preds_loc.append(net_loc)
-
-		net = slim.conv2d(net, 128, [1, 1], scope='conv9')
-		net = slim.conv2d(net, 256, [3, 3], 2, scope='conv9_2')
-
-		net_conf, net_loc = SSDHook(net, 'conv9_2')
-		preds_conf.append(net_conf)
-		preds_loc.append(net_loc)
-	"""
-
 	# Concatenate all preds together into 1 vector, for both classification and localization predictions
-	final_pred_conf = tf.concat(1, preds_conf)
-	final_pred_loc = tf.concat(1, preds_loc)
+	final_pred_conf = tf.concat(preds_conf,1)
+	final_pred_loc = tf.concat(preds_loc,1)
 
 	# Return a dictionary of {tensor_name: tensor_reference}
 	ret_dict = {
@@ -239,7 +199,6 @@ def SSDModel():
 		model = AlexNet()
 	else:
 		raise NotImplementedError('Model %s not supported' % MODEL)
-
 	model_helper = ModelHelper(model['y_pred_conf'], model['y_pred_loc'])
 
 	ssd_model = {}

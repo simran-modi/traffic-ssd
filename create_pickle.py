@@ -41,7 +41,6 @@ for folder in folder_list:
 		for line in f:
 			line = line[:-1]  # strip trailing newline
 			merged_annotations.append(line)
-
 	# Create pickle file to represent dataset
 
 	image_files = os.listdir(folder+'/images') 
@@ -54,7 +53,7 @@ for folder in folder_list:
 				fields = line.split(',')
 				# Get sign name and assign class label
 				sign_name = fields[-1]
-				if sign_name != 'warning' and sign_name != 'prohibitory' and sign_name != 'mandatory':
+				if sign_name != 'danger' and sign_name != 'prohibitory' and sign_name != 'mandatory':
 					continue  # ignore signs that are neither stop nor pedestrianCrossing signs
 				sign_class = sign_map[sign_name]
 				class_list.append(sign_class)
@@ -62,14 +61,13 @@ for folder in folder_list:
 				# Resize image, get rescaled box coordinates
 				box_coords = np.array([float(x) for x in fields[1:5]])
 				image = Image.open(folder+"/images/"+image_file)
-				
 				if GRAYSCALE:
 					image = image.convert('L')  # 8-bit grayscale
 				if RESIZE_IMAGE:
 					orig_w, orig_h = image.size
 					image = image.resize((TARGET_W, TARGET_H), Image.LANCZOS)  # high-quality downsampling filter
 
-					resized_dir = 'resized_images_%dx%d/' % (TARGET_W, TARGET_H)
+					resized_dir = '/home/simran/Desktop/resized/'+folder+'_%dx%d/' % (TARGET_W, TARGET_H)
 					if not os.path.exists(resized_dir):
 						os.makedirs(resized_dir)
 

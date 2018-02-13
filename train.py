@@ -39,7 +39,7 @@ def next_batch(X, y_conf, y_loc, batch_size):
 		# Read images from image_files
 		images = []
 		for image_file in image_files:
-			image = Image.open('resized_images_%sx%s/%s' % (IMG_W, IMG_H, image_file))
+			image = Image.open('/home/simran/Desktop/resized/italian_%sx%s/%s' % (IMG_W, IMG_H, image_file))
 			image = np.asarray(image)
 			images.append(image)
 
@@ -79,7 +79,7 @@ def next_batch(X, y_conf, y_loc, batch_size):
 			# no need to prune negative data
 			conf_loss_mask = np.ones_like(y_true_conf)
 
-		yield (images, y_true_conf, y_true_loc, conf_loss_mask)
+		yield (images, y_true_conf, y_true_loc, conf_loss_mask, num_pos)
 
 		# Update start index for the next batch
 		start_idx += batch_size
@@ -105,36 +105,39 @@ def run_training():
 	X_train = []
 	y_train_conf = []
 	y_train_loc = []
-
+	Xs_train = []
+	ys_train_conf =[]
+	ys_train_loc =[]
+	X_valid = []
+	y_valid_conf =[]
+	y_valid_loc =[]
+	
 	for source in train.keys():
 		for image_file in train[source].keys():
 			Xs_train.append(image_file)
-			ys_train_conf.append(train[image_file]['y_true_conf'])
-			ys_train_loc.append(train[image_file]['y_true_loc'])
-	Xs_train = np.array(Xs_train)
-	ys_train_conf = np.array(ys_train_conf)
-	ys_train_loc = np.array(ys_train_loc)
+			ys_train_conf.append(train[source][image_file]['y_true_conf'])
+			ys_train_loc.append(train[source][image_file]['y_true_loc'])
+		Xs_train = np.array(Xs_train)
+		ys_train_conf = np.array(ys_train_conf)
+		ys_train_loc = np.array(ys_train_loc)
 
-	# Train/validation split
-	Xs_train, Xs_valid, ys_train_conf, ys_valid_conf, ys_train_loc, ys_valid_loc = train_test_split(\
-		Xs_train, ys_train_conf, ys_train_loc, test_size=VALIDATION_SIZE, random_state=1)
+		# Train/validation split
+		Xs_train, Xs_valid, ys_train_conf, ys_valid_conf, ys_train_loc, ys_valid_loc = train_test_split(\
+			Xs_train, ys_train_conf, ys_train_loc, test_size=VALIDATION_SIZE, random_state=1)
 
-	#X_train is a numpy array
-	X_train.append(Xs_train.items()) #DO: append a items in Xs_train numpy array to a global numpy array
-	...
-	...
-	
-	for image_file in train[source].keys():
-		X_train.append(image_file)
-		y_train_conf.append(train[image_file]['y_true_conf'])
-		y_train_loc.append(train[image_file]['y_true_loc'])
-	X_train = np.array(X_train)
-	y_train_conf = np.array(y_train_conf)
-	y_train_loc = np.array(y_train_loc)
-
-	# Train/validation split
-	X_train, X_valid, y_train_conf, y_valid_conf, y_train_loc, y_valid_loc = train_test_split(\
-		X_train, y_train_conf, y_train_loc, test_size=VALIDATION_SIZE, random_state=1)
+		#X_train is a numpy array
+		X_train.append(Xs_train) #DO: append a items in Xs_train numpy array to a global numpy array
+		X_valid.append(Xs_valid)
+		y_train_conf.append(ys_train_conf)
+		y_valid_conf.append(ys_valid_conf)
+		y_train_loc.append(ys_train_loc)
+		y_valid_loc.append(ys_valid_loc)
+	X_train = np.squeeze(np.array(X_train),axis=0)
+	X_valid = np.squeeze(np.array(X_valid),axis=0)
+	y_train_conf = np.squeeze(np.array(y_train_conf),axis=0)
+	y_valid_conf = np.squeeze(np.array(y_valid_conf),axis=0)
+	y_train_loc = np.squeeze(np.array(y_train_loc),axis=0)
+	y_valid_loc = np.squeeze(np.array(y_valid_loc),axis=0)
 
 	# Launch the graph
 	with tf.Graph().as_default(), tf.Session() as sess:
@@ -147,6 +150,7 @@ def run_training():
 		is_training = model['is_training']
 		optimizer = model['optimizer']
 		reported_loss = model['loss']
+		num_pos = model['num_pos']
 
 		# Training process
 		# TF saver to save/restore trained model
@@ -171,6 +175,10 @@ def run_training():
 		# Record time elapsed for performance check
 		last_time = time.time()
 		train_start_time = time.time()
+		
+		#visualize tensorflow graph
+		writer = tf.summary.FileWriter("logs/", graph=tf.get_default_graph())
+		print("Graph saved")
 
 		# Run NUM_EPOCH epochs of training
 		for epoch in range(NUM_EPOCH):
@@ -181,15 +189,16 @@ def run_training():
 			# Run training on each batch
 			for _ in range(num_batches_train):
 				# Obtain the training data and labels from generator
-				images, y_true_conf_gen, y_true_loc_gen, conf_loss_mask_gen = next(train_gen)
-
+				images, y_true_conf_gen, y_true_loc_gen, conf_loss_mask_gen, num_pos_gen = next(train_gen)
+				#print(y_true_conf_gen, y_true_loc_gen)
 				# Perform gradient update (i.e. training step) on current batch
-				_, loss = sess.run([optimizer, reported_loss], feed_dict={
+				_, loss, loc_loss, conf_loss = sess.run([optimizer, reported_loss, model['loc_loss'], model['conf_loss']], feed_dict={
 				#_, loss, loc_loss_dbg, loc_loss_mask, loc_loss = sess.run([optimizer, reported_loss, model['loc_loss_dbg'], model['loc_loss_mask'], model['loc_loss']],feed_dict={  # DEBUG
 					x: images,
 					y_true_conf: y_true_conf_gen,
 					y_true_loc: y_true_loc_gen,
 					conf_loss_mask: conf_loss_mask_gen,
+					num_pos: num_pos_gen,
 					is_training: True
 				})
 				
@@ -203,14 +212,14 @@ def run_training():
 			num_batches_valid = math.ceil(X_valid.shape[0] / BATCH_SIZE)
 			losses = []
 			for _ in range(num_batches_valid):
-				images, y_true_conf_gen, y_true_loc_gen, conf_loss_mask_gen = next(valid_gen)
-
+				images, y_true_conf_gen, y_true_loc_gen, conf_loss_mask_gen, num_pos_gen = next(valid_gen)
 				# Perform forward pass and calculate loss
 				loss = sess.run(reported_loss, feed_dict={
 					x: images,
 					y_true_conf: y_true_conf_gen,
 					y_true_loc: y_true_loc_gen,
 					conf_loss_mask: conf_loss_mask_gen,
+					num_pos: num_pos_gen,
 					is_training: False
 				})
 				losses.append(loss)
@@ -218,7 +227,7 @@ def run_training():
 
 			# Record and report train/validation/test losses for this epoch
 			loss_history.append((train_loss, valid_loss))
-
+			print(conf_loss, loc_loss)
 			# Print accuracy every epoch
 			print('Epoch %d -- Train loss: %.4f, Validation loss: %.4f, Elapsed time: %.2f sec' %\
 				(epoch+1, train_loss, valid_loss, time.time() - last_time))
@@ -246,7 +255,9 @@ def run_training():
 			print('Loss history saved at loss_history.p')
 			with open('loss_history.p', 'wb') as f:
 				pickle.dump(loss_history, f)
-
+		
+		writer.close()		
+	
 	# Return final test accuracy and accuracy_history
 	return test_loss, loss_history
 
