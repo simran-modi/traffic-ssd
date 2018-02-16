@@ -46,6 +46,7 @@ LOC_LOSS_WEIGHT = 1.  # weight of localization loss: loss = conf_loss + LOC_LOSS
 RESUME = False  # resume training from previously saved model?
 NUM_EPOCH = 200
 BATCH_SIZE = 9  # batch size for training (relatively small)
-VALIDATION_SIZE = 0.05  # fraction of total training set to use as validation set
+VALIDATION_SIZE = 0.2  # fraction of total training set to use as validation set
+TEST_SIZE = 0.2 # fraction of total dataset set to use as test set
 SAVE_MODEL = True  # save trained model to disk?
 MODEL_SAVE_PATH = './model.ckpt'  # where to save trained model

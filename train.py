@@ -102,42 +102,53 @@ def run_training():
 	#	test = pickle.load(f)
 
 	# Format the data
-	X_train = []
-	y_train_conf = []
-	y_train_loc = []
-	Xs_train = []
-	ys_train_conf =[]
-	ys_train_loc =[]
-	X_valid = []
-	y_valid_conf =[]
-	y_valid_loc =[]
+   X_train = []
+   y_train_conf = []
+   y_train_loc = []
+   X_test = []
+   y_test_conf =[]
+   y_test_loc =[]
+   X_valid = []
+   y_valid_conf =[]
+   y_valid_loc =[]
+   X_source = []
+   y_source_conf =[]
+   y_source_loc=[]     
 	
 	for source in train.keys():
 		for image_file in train[source].keys():
-			Xs_train.append(image_file)
-			ys_train_conf.append(train[source][image_file]['y_true_conf'])
-			ys_train_loc.append(train[source][image_file]['y_true_loc'])
-		Xs_train = np.array(Xs_train)
-		ys_train_conf = np.array(ys_train_conf)
-		ys_train_loc = np.array(ys_train_loc)
+			X_source.append(image_file)
+			y_source_conf.append(train[source][image_file]['y_true_conf'])
+			y_source_loc.append(train[source][image_file]['y_true_loc'])
+		X_source = np.array(X_source)
+		y_source_conf = np.array(y_source_conf)
+		y_source_loc = np.array(y_source_loc)
 
-		# Train/validation split
-		Xs_train, Xs_valid, ys_train_conf, ys_valid_conf, ys_train_loc, ys_valid_loc = train_test_split(\
-			Xs_train, ys_train_conf, ys_train_loc, test_size=VALIDATION_SIZE, random_state=1)
+		# Stratified Train/validation/test split - 60 -20-20
+		Xs_train, Xs_test, ys_train_conf, ys_test_conf, ys_train_loc, ys_test_loc = train_test_split(\
+			X_source, y_source_conf, y_source_loc, test_size=TEST_SIZE, random_state=1, stratify = y_source_conf)
+      Xs_train, Xs_valid, ys_train_conf, ys_valid_conf, ys_train_loc, ys_valid_loc = train_test_split(\
+			Xs_train, ys_train_conf, ys_train_loc, test_size=VALIDATION_SIZE, random_state=1, stratify = ys_train_conf)
 
 		#X_train is a numpy array
-		X_train.append(Xs_train) #DO: append a items in Xs_train numpy array to a global numpy array
-		X_valid.append(Xs_valid)
+		X_train.append(Xs_train)
+      X_valid.append(Xs_valid)
+      X_test.append(Xs_test)
 		y_train_conf.append(ys_train_conf)
 		y_valid_conf.append(ys_valid_conf)
-		y_train_loc.append(ys_train_loc)
+     y_test_conf.append(ys_test_conf)
+		y_train_loc.append(y_source_loc)
 		y_valid_loc.append(ys_valid_loc)
+     y_test_loc.append(ys_test_loc)   
 	X_train = np.squeeze(np.array(X_train),axis=0)
 	X_valid = np.squeeze(np.array(X_valid),axis=0)
+    X_test = np.squeeze(np.array(X_test),axis=0)
 	y_train_conf = np.squeeze(np.array(y_train_conf),axis=0)
 	y_valid_conf = np.squeeze(np.array(y_valid_conf),axis=0)
+    y_test_conf = np.squeeze(np.array(y_test_conf),axis=0)
 	y_train_loc = np.squeeze(np.array(y_train_loc),axis=0)
 	y_valid_loc = np.squeeze(np.array(y_valid_loc),axis=0)
+    y_test_loc = np.squeeze(np.array(y_test_loc),axis=0)
 
 	# Launch the graph
 	with tf.Graph().as_default(), tf.Session() as sess:
